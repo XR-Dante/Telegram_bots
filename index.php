@@ -1,55 +1,53 @@
 <?php
-require "../credentials.php";
 
-$website = "https://api.telegram.org/bot$converter_bot_token/";
+require './vendor/autoload.php';
+require './credentials.php';
+require './CurrencyApi.php';
 
-$content = file_get_contents("php://input");
-$update = json_decode($content);
+use GuzzleHttp\Client;
 
-if (isset($update->message)) {
-    $message = $update->message;
-    $text = $message->text;
-    $chatID = $message->chat->id;
-    
-    $first_name = $message->from->first_name;
-    $last_name = isset($message->from->last_name) ? $message->from->last_name : "";
-    $fullname = trim($first_name . " " . $last_name);
+$api = "https://api.telegram.org/bot$converter_bot_token/";
+$client = new Client(['base_uri' => $api]);
 
-    if ($text == "/start") {
-        $reply_name = "Salom, $fullname! Botimizga xush kelibsiz! 👋:";
-        
-        $lineKeyboard = [
-            [
-                ["text" => "🇺🇸 USD -> 🇺🇿 UZS", "callback_data" => "convert_usd_uzs"],
-                ["text" => "🇪🇺 EUR -> 🇺🇿 UZS", "callback_data" => "convert_eur_uzs"],
-                ["text" => "🇷🇺 RUBL -> 🇺🇿 UZS", "callback_data" => "convert_rub_uzs"]
-            ]
-        ];
+$request = json_decode(file_get_contents("php://input"));
 
-        $replyMarkup = json_encode([
-            "inline_keyboard" => $lineKeyboard
-        ]);
-        
-        file_get_contents($website . "sendMessage?chat_id=$chatID&text=$reply_name&reply_markup=" . urlencode($replyMarkup));
-    }
+$text = $request->message->text ?? '';
+$chatId = $request->message->chat->id ?? '';
+$firstName = $request->message->from->first_name ?? '';
+
+$currency = new CurrencyApi();
+
+
+$currencies = [
+    '🇺🇸 USD > 🇺🇿 UZS' => 'USD',
+    '🇬🇧 GBP > 🇺🇿 UZS' => 'GBP',
+    '🇷🇺 RUB > 🇺🇿 UZS' => 'RUB'
+];
+
+
+if ($text == '/start') {
+    $text = "Assalomu alaykum, $firstName!\n\nBu bot quyidagi amallarni bajara oladi:\n/usd2uzs - Dollardan So'mga o'giradi";
 }
 
-if (isset($update->callback_query)) {
-    $callback_query = $update->callback_query;
-    $callback_data = $callback_query->data;
-    $chatID = $callback_query->message->chat->id;
 
-    // Tugmani tekshirish va shart bajarish
-    if ($callback_data == "convert_usd_uzs") {
-        $reply = "1 USD = 12,000 UZS 💰";
-    } elseif ($callback_data == "convert_eur_uzs") {
-        $reply = "1 EUR = 13,000 UZS 💶";
-    } elseif ($callback_data == "convert_rub_uzs") {    
-        $reply = "1 RUB = 150 UZS 🇷🇺";
-    } else {
-        $reply = "Noto‘g‘ri tanlov!";
-    }
-
-    
-    file_get_contents($website . "sendMessage?chat_id=$chatID&text=" . urlencode($reply));
+if (isset($currencies[$text])) {
+    $text = $currency->getRate($currencies[$text]) . " so'm";
 }
+
+
+function getKeyboard() {
+    return json_encode([
+        'keyboard' => [
+            [['text' => '🇺🇸 USD > 🇺🇿 UZS'], ['text' => '🇬🇧 GBP > 🇺🇿 UZS'], ['text' => '🇷🇺 RUB > 🇺🇿 UZS']]
+        ],
+        'resize_keyboard' => true
+    ]);
+}
+
+$client->post('sendMessage', [
+    'form_params' => [
+        'chat_id' => $chatId,
+        'text' => $text,
+        'reply_markup' => getKeyboard()
+    ]
+]);
