@@ -1,2 +1,5 @@
 .VS code
 credentials.php
+vendor/
+composer.lock
+.env

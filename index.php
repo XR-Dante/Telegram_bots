@@ -17,23 +17,27 @@ $firstName = $request->message->from->first_name ?? '';
 
 $currency = new CurrencyApi();
 
-
 $currencies = [
     '🇺🇸 USD > 🇺🇿 UZS' => 'USD',
     '🇬🇧 GBP > 🇺🇿 UZS' => 'GBP',
     '🇷🇺 RUB > 🇺🇿 UZS' => 'RUB'
 ];
 
+$imageUrl = "https://www.ribaostore.com/cdn/shop/articles/new_100_dollar_bill_1143x.jpg?v=1673755837";
 
 if ($text == '/start') {
-    $text = "Assalomu alaykum, $firstName!\n\nBu bot quyidagi amallarni bajara oladi:\n/usd2uzs - Dollardan So'mga o'giradi";
+    $client->post('sendPhoto', [
+        'form_params' => [
+            'chat_id' => $chatId,
+            'photo' => $imageUrl,
+            'caption' => "Assalomu alaykum, $firstName! 😊\n\nBu bot valyuta kurslarini o‘girish uchun yaratilgan.\nValyutani tanlang va kursni bilib oling!",
+        ]
+    ]);
 }
-
 
 if (isset($currencies[$text])) {
     $text = $currency->getRate($currencies[$text]) . " so'm";
 }
-
 
 function getKeyboard() {
     return json_encode([
